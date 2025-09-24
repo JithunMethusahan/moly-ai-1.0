@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moly Chat</title>
+  <style>
+    /* General Page Styling */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #0f0f0f;
+      color: #fff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Chat Container */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 800px;
+      height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Chat Messages Area */
+    .chat-box {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px;
+      background: #111;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* User and AI Messages */
+    .user-msg, .ai-msg, .thinking-msg {
+      padding: 10px 15px;
+      border-radius: 8px;
+      max-width: 75%;
+      line-height: 1.5;
+      font-size: 15px;
+      word-wrap: break-word;
+    }
+
+    .user-msg {
+      background: #2a2a2a;
+      align-self: flex-end;
+      text-align: right;
+      color: #fff;
+    }
+
+    .ai-msg {
+
+      color: #ffffff;
+      align-self: flex-start;
+      text-align: left;
+    }
+
+    /* "Thinking" message */
+    .thinking-msg {
+      background: transparent;
+      color: #888;
+      font-style: italic;
+      align-self: flex-start;
+    }
+
+    /* Input Area */
+    .input-area {
+      display: flex;
+      margin-top: 15px;
+      width: 100%;
+    }
+
+    .input-area input {
+      flex: 1;
+      padding: 12px 15px;
+      border: none;
+      outline: none;
+      border-radius: 25px;
+      font-size: 16px;
+      background: #2a2a2a;
+      color: white;
+    }
+
+    .input-area button {
+      padding: 12px 20px;
+      margin-left: 10px;
+      border: none;
+      border-radius: 25px;
+      background: #00bfff;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .input-area button:hover {
+      background: #0090cc;
+    }
+
+    /* Scrollbar Styling */
+    .chat-box::-webkit-scrollbar {
+      width: 8px;
+    }
+    .chat-box::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div id="chat-box" class="chat-box">
+      <div class="ai-msg"><strong>moly:</strong> Hi! How can I help you today?</div>
+    </div>
+
+    <div class="input-area">
+      <input type="text" id="user-input" placeholder="Type your message here..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    async function sendMessage() {
+      const inputField = document.getElementById("user-input");
+      const chatBox = document.getElementById("chat-box");
+      const userMessage = inputField.value.trim();
+
+      if (!userMessage) return;
+
+      // Add user message to chat
+      chatBox.innerHTML += `<div class="user-msg"><strong>You:</strong> ${userMessage}</div>`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+      inputField.value = "";
+
+      // Show "moly is thinking..." message
+      const thinkingId = "thinking-" + Date.now();
+      chatBox.innerHTML += `<div class="thinking-msg" id="${thinkingId}">moly is thinking...</div>`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      try {
+        // Send message to Flask backend
+        const response = await fetch("/send_message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: userMessage })
+        });
+
+        const data = await response.json();
+
+        // Remove the "thinking" message
+        const thinkingElement = document.getElementById(thinkingId);
+        if (thinkingElement) {
+          thinkingElement.remove();
+        }
+
+        // Add AI response to chat
+        chatBox.innerHTML += `<div class="ai-msg"><strong>moly:</strong> ${data.response}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      } catch (error) {
+        // Remove thinking message if error occurs
+        const thinkingElement = document.getElementById(thinkingId);
+        if (thinkingElement) {
+          thinkingElement.remove();
+        }
+
+        chatBox.innerHTML += `<div class="ai-msg"><strong>moly:</strong> ❌ Error connecting to server</div>`;
+      }
+    }
+
+    // Allow pressing Enter to send message
+    document.getElementById("user-input").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
